@@ -353,9 +353,9 @@
                                     <GridPane hgap="10.0" prefHeight="151.0" prefWidth="481.0" vgap="10.0">
                                       <columnConstraints>
                                         <ColumnConstraints hgrow="SOMETIMES" maxWidth="129.0" minWidth="10.0" prefWidth="129.0" />
-                                        <ColumnConstraints hgrow="SOMETIMES" maxWidth="140.0" minWidth="10.0" prefWidth="122.0" />
-                                          <ColumnConstraints hgrow="SOMETIMES" maxWidth="110.0" minWidth="0.0" prefWidth="27.0" />
-                                          <ColumnConstraints hgrow="SOMETIMES" maxWidth="110.0" minWidth="10.0" prefWidth="63.0" />
+                                        <ColumnConstraints hgrow="SOMETIMES" maxWidth="140.0" minWidth="10.0" prefWidth="140.0" />
+                                          <ColumnConstraints hgrow="SOMETIMES" maxWidth="110.0" minWidth="0.0" prefWidth="91.0" />
+                                          <ColumnConstraints hgrow="SOMETIMES" maxWidth="110.0" minWidth="10.0" prefWidth="85.0" />
                                       </columnConstraints>
                                       <rowConstraints>
                                         <RowConstraints maxHeight="46.0" minHeight="10.0" prefHeight="22.0" vgrow="SOMETIMES" />
@@ -379,7 +379,7 @@
                                                                       <Font size="14.0" />
                                                                   </font>
                                                               </RadioButton>
-                                          <Group fx:id="histLocalGroup" disable="true" GridPane.rowIndex="2">
+                                          <Group fx:id="histLocalGroup" disable="true" visible="false" GridPane.columnIndex="1" GridPane.rowIndex="1">
                                              <children>
                                                                   <Label prefHeight="17.0" prefWidth="113.0" text="Neighborhood" />
                                                 <HBox layoutY="22.0">
@@ -412,17 +412,21 @@
                                                             <Button fx:id="histEqButton" disable="true" maxWidth="-Infinity" minWidth="-Infinity" mnemonicParsing="false" onAction="#histEqButtonClicked" prefWidth="90.0" text="OK" GridPane.columnIndex="2" GridPane.rowIndex="1" />
                                           <VBox spacing="5.0" GridPane.columnIndex="1" GridPane.rowIndex="2">
                                              <children>
-                                                <Label text="Enter an odd integer." wrapText="true" />
-                                                                  <HBox>
-                                                                      <children>
-                                                      <Label prefHeight="17.0" prefWidth="24.0" text="n = ">
-                                                         <font>
-                                                            <Font name="System Italic" size="12.0" />
-                                                         </font>
-                                                      </Label>
-                                                                          <TextField fx:id="histLocalFilterSize" alignment="CENTER" maxHeight="-Infinity" minHeight="-Infinity" prefHeight="20.0" prefWidth="33.0" text="3" />
-                                                                      </children>
-                                                                  </HBox>
+                                                <Group fx:id="histLocalGroup2" disable="true" visible="false">
+                                                   <children>
+                                                      <Label text="Enter an odd integer." wrapText="true" />
+                                                                        <HBox layoutY="22.0">
+                                                                            <children>
+                                                            <Label prefHeight="17.0" prefWidth="24.0" text="n = ">
+                                                               <font>
+                                                                  <Font name="System Italic" size="12.0" />
+                                                               </font>
+                                                            </Label>
+                                                                                <TextField fx:id="histLocalFilterSize" alignment="CENTER" maxHeight="-Infinity" minHeight="-Infinity" prefHeight="20.0" prefWidth="33.0" text="3" />
+                                                                            </children>
+                                                                        </HBox>
+                                                   </children>
+                                                </Group>
                                              </children>
                                           </VBox>
                                        </children>
