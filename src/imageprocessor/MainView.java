@@ -177,7 +177,6 @@ public class MainView implements Initializable {
     @FXML
     private void openFileFired(ActionEvent event) {
         final FileChooser fileChooser = new FileChooser();
-        fileChooser.setInitialDirectory(new File("C:\\imgs"));
         fileChooser.setTitle("Open Image");
         File file = fileChooser.showOpenDialog(imageprocessor.MainApp.primaryStage);
 
@@ -192,7 +191,6 @@ public class MainView implements Initializable {
     @FXML
     private void saveFileFired(ActionEvent event) {
         final FileChooser fileChooser = new FileChooser();
-        fileChooser.setInitialDirectory(new File("C:\\imgs"));
         fileChooser.setTitle("Save Image");
         File file = fileChooser.showSaveDialog(imageprocessor.MainApp.primaryStage);
         if (file != null) {
@@ -202,17 +200,18 @@ public class MainView implements Initializable {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-//            rightGrayImage.toFile(file);
         }
     }
 
     @FXML
     private void exitItemFired(ActionEvent event) {
         Platform.exit();
+        MainApp.primaryStage.close();
     }
 
     /**
-     * Moves the image from right pane to left pane.
+     * Moves the image from right pane to left pane. The left pane is the "processing stage," the right pane displays
+     * results of processing.
      *
      * @param event button click
      */
@@ -669,6 +668,9 @@ public class MainView implements Initializable {
         tp2.setVisible(false);
         leftHistPane.setVisible(false);
         rightHistPane.setVisible(false);
+
+
+
         right2LeftGroup.setVisible(false);
 
         histGlobal.setUserData("global");
