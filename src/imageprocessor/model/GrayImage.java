@@ -7,7 +7,10 @@ import javafx.scene.image.WritableImage;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
+import java.awt.color.ColorSpace;
 import java.awt.image.BufferedImage;
+import java.awt.image.BufferedImageOp;
+import java.awt.image.ColorConvertOp;
 import java.io.File;
 import java.io.IOException;
 
@@ -30,25 +33,25 @@ public class GrayImage {
         bimg = SwingFXUtils.fromFXImage(img, bimg);
 
         pixels2D = buffImage2GrayPixels2D(bimg);
-        pixels1D = pixels1Dfrom2D(pixels2D);
+        pixels1D = MatrixUtils.pixels1Dfrom2D(pixels2D);
         this.bitDepth = bitDepth;
         histogram = calcHistogram(pixels1D);
     }
 
-    private GrayImage(int[][] pixArray2D, int bitDepth) {
+    public GrayImage(int[][] pixArray2D, int bitDepth) {
         width = pixArray2D.length;
         height = pixArray2D[0].length;
         pixels2D = pixArray2D;
-        pixels1D = pixels1Dfrom2D(pixels2D);
+        pixels1D = MatrixUtils.pixels1Dfrom2D(pixels2D);
         this.bitDepth = bitDepth;
         histogram = calcHistogram(pixels1D);
     }
 
-    private GrayImage(int[] pixArray1D, int w, int h, int bitDepth) {
+    public GrayImage(int[] pixArray1D, int w, int h, int bitDepth) {
         width = w;
         height = h;
         pixels1D = pixArray1D;
-        pixels2D = pixels2Dfrom1D(pixels1D, w, h);
+        pixels2D = MatrixUtils.pixels2Dfrom1D(pixels1D, w, h);
         this.bitDepth = bitDepth;
         histogram = calcHistogram(pixels1D);
     }
@@ -58,9 +61,10 @@ public class GrayImage {
             BufferedImage bimg = ImageIO.read(f);
             width = bimg.getWidth();
             height = bimg.getHeight();
+            BufferedImage grayBimg = convertToGrayscale(bimg);
 
-            pixels2D = buffImage2GrayPixels2D(bimg);
-            pixels1D = pixels1Dfrom2D(pixels2D);
+            pixels2D = buffImage2GrayPixels2D(grayBimg);
+            pixels1D = MatrixUtils.pixels1Dfrom2D(pixels2D);
             bitDepth = 8;
             histogram = calcHistogram(pixels1D);
         } catch (IOException e) {
@@ -73,110 +77,11 @@ public class GrayImage {
         height = bimg.getHeight();
 
         pixels2D = buffImage2GrayPixels2D(bimg);
-        pixels1D = pixels1Dfrom2D(pixels2D);
+        pixels1D = MatrixUtils.pixels1Dfrom2D(pixels2D);
         bitDepth = 8;
         histogram = calcHistogram(pixels1D);
     }
 
-    /**
-     * Normalizes intensity values in pixels[] to a desired range. In almost all cases, the target range is [0, 255].
-     *
-     * @param pixels An array of pixel values that we want to normalize
-     * @param targetMin Minimum value in target range
-     * @param targetMax Maximum value in target range
-     * @return Array of normalized pixel values
-     */
-    private static int[] normalizePixelValues(double[] pixels, double targetMin, double targetMax) {
-        double min = arrayMin(pixels);
-        double max = arrayMax(pixels);
-
-        int[] result = new int[pixels.length];
-        double temp;
-        double linearChange;
-        for (int i=0; i<pixels.length; ++i) {
-            linearChange = (pixels[i] - min) / (max - min);
-            temp = ((targetMax - targetMin) * linearChange) + targetMin;
-            result[i] = (int) (temp + 0.5);
-        }
-        return result;
-    }
-
-    /**
-     * Normalizes intensity values in pixels[] to a desired range. In almost all cases, the target range is [0, 255].
-     *
-     * @param pixels An array of pixel values that we want to normalize
-     * @param targetMin Minimum value in target range
-     * @param targetMax Maximum value in target range
-     * @return Array of normalized pixel values
-     */
-    private static int[] normalizePixelValues(int[] pixels, double targetMin, double targetMax) {
-        double[] doublePixels = int2doubleArr(pixels);
-        return normalizePixelValues(doublePixels, targetMin, targetMax);
-    }
-
-    /**
-     * Finds the max value in an array.
-     *
-     * @param arr array of doubles
-     * @return max
-     */
-    private static double arrayMax(double[] arr) {
-        double max = Double.MIN_VALUE;
-        for (double x : arr) {
-            if (x > max) {
-                max = x;
-            }
-        }
-        return max;
-    }
-
-    /**
-     * Finds min value in an array.
-     *
-     * @param arr array of doubles
-     * @return min
-     */
-    private static double arrayMin(double[] arr) {
-        double min = Double.MAX_VALUE;
-        for (double x : arr) {
-            if (x < min) {
-                min = x;
-            }
-        }
-        return min;
-    }
-
-    /**
-     * Finds max value in an array.
-     *
-     * @param arr array of ints
-     * @return max
-     */
-    private static int arrayMax(int[] arr) {
-        int max = Integer.MIN_VALUE;
-        for (int x : arr) {
-            if (x > max) {
-                max = x;
-            }
-        }
-        return max;
-    }
-
-    /**
-     * Finds min value in an array.
-     *
-     * @param arr array of ints
-     * @return min
-     */
-    private static int arrayMin(int[] arr) {
-        int min = Integer.MAX_VALUE;
-        for (int x : arr) {
-            if (x < min) {
-                min = x;
-            }
-        }
-        return min;
-    }
 
     public static void main(String[] args) {
         int[][] p = new int[10][10];
@@ -185,15 +90,24 @@ public class GrayImage {
                 p[x][y] = 80;
             }
             for (int x=5; x<10; ++x) {
-                p[x][y] = 150;
+                p[x][y] = 200;
             }
         }
 
         GrayImage gi = new GrayImage(p, 8);
 
-        File f = new File("C:\\imgs\\test.png");
+        File f = new File("C:\\imgs\\test.bmp");
         gi.toFile(f);
 
+        int[][] a = new int[256][10];
+        for (int y=0; y<10; ++y) {
+            for (int x = 0; x < 256; ++x) {
+                a[x][y] = x;
+            }
+        }
+        GrayImage g = new GrayImage(a, 8);
+        File f1 = new File("C:\\imgs\\test2.bmp");
+        g.toFile(f);
     }
 
     public int getWidth() {
@@ -263,10 +177,12 @@ public class GrayImage {
                 if (red == green && green == blue) {
                     gray = red;
                 } else {
-                    red = (int) (c.getRed() * 0.299);
-                    green = (int) (c.getGreen() * 0.587);
-                    blue = (int) (c.getBlue() * 0.114);
-                    gray = red + green + blue;
+//                    red = (int) (c.getRed() * 0.299);
+//                    green = (int) (c.getGreen() * 0.587);
+//                    blue = (int) (c.getBlue() * 0.114);
+//                    gray = red + green + blue;
+                    gray = (int) ((c.getRed() * 0.299) + (c.getGreen() * 0.587) + (c.getBlue() * 0.114));
+//                    gray = Math.max(blue, Math.max(red, green));
                 }
                 result[x][y] = gray;
             }
@@ -274,42 +190,6 @@ public class GrayImage {
         return result;
     }
 
-    /**
-     * Given a 2D array of pixels, returns equivalent 1D array. Helper function for class constructor.
-     *
-     * @return 1D pixel array
-     * @param pixels2D
-     */
-    private int[] pixels1Dfrom2D(int[][] pixels2D) {
-        int[] result = new int[width * height];
-        int resultIndex = 0;
-        for (int y = 0; y < height; ++y) {
-            for (int x = 0; x < width; ++x) {
-                result[resultIndex++] = pixels2D[x][y];
-            }
-        }
-        return result;
-    }
-
-    /**
-     * Given a 1D array of pixels, returns equivalent 2D array. Helper function for class constructor.
-     *
-     * @param pixels1D 1D array of pixels
-     * @param width width of returned 2D array
-     * @param height height of returned 2D array
-     * @return 2D array of pixels
-     */
-    private static int[][] pixels2Dfrom1D(int[] pixels1D, int width, int height) {
-        int[][] result = new int[width][height];
-        int index1D = 0;
-        for (int y = 0; y < height; ++y) {
-            for (int x = 0; x < width; ++x) {
-                int gray = pixels1D[index1D++];
-                result[x][y] = gray;
-            }
-        }
-        return result;
-    }
 
     /**
      * Takes a 1D array of pixel values and returns a histogram.
@@ -323,7 +203,8 @@ public class GrayImage {
 
         // for each pixel, get the brightness value, and increment counter for that brightness.
         for (int grayValue : grayPixelValues) {
-            grayPixelCounts[grayValue]++;
+            int clippedGrayValue = Math.min(255, Math.max(grayValue, 0));
+            grayPixelCounts[clippedGrayValue]++;
         }
         return grayPixelCounts;
     }
@@ -385,8 +266,8 @@ public class GrayImage {
 
         // If bitDepth != 8, we need to scale pixel intensities to [0, 255] before displaying on screen.
         if (bitDepth != 8) {
-            int[] scaledPixels1D = normalizePixelValues(pixels1D, 0, 255);
-            GrayImage scaledGrayImage = new GrayImage(scaledPixels1D, width, height, bitDepth);
+            int[] scaledPixels1D = MatrixUtils.normalizePixelValues(pixels1D, 0, 255);
+            GrayImage scaledGrayImage = new GrayImage(scaledPixels1D, width, height, 8);
             bi = scaledGrayImage.toBufferedImage();
         } else {
             bi = this.toBufferedImage();
@@ -424,14 +305,13 @@ public class GrayImage {
         int grayLevels = (int) Math.pow(2, bitDepth);
 
         for (int i = 0; i < origPixels.length; ++i) {
-//            double logTransGrayValue = c * Math.log((double) (origPixels[i] / (grayLevels - 1)) + 1.0);
-            double logTransGrayValue = c * Math.log((double) (origPixels[i] + 1.0));
+            double logTransGrayValue = Math.min(grayLevels-1, c * Math.log(origPixels[i] + 1.0));
             tempPixels[i] = logTransGrayValue;
         }
 
-        int[] resultPixels = normalizePixelValues(tempPixels, 0, 255);
+        int[] resultPixels = MatrixUtils.normalizePixelValues(tempPixels, 0, 255);
 
-        return new GrayImage(resultPixels, this.width, this.height, this.bitDepth);
+        return new GrayImage(resultPixels, width, height, bitDepth);
     }
 
     /**
@@ -450,7 +330,7 @@ public class GrayImage {
             tempPixels[i] = Math.min(255.0, 255.0 * c * Math.pow(origPixels[i] / 255.0, gamma));
         }
 
-        int[] resultPixels = normalizePixelValues(tempPixels, 0, 255);
+        int[] resultPixels = MatrixUtils.normalizePixelValues(tempPixels, 0, 255);
 
         return new GrayImage(resultPixels, this.width, this.height, this.bitDepth);
     }
@@ -468,7 +348,7 @@ public class GrayImage {
             tempPixels[i] = origPixels[i] / 2;
         }
 
-        return new GrayImage(tempPixels, width, height, this.bitDepth - 1);
+        return new GrayImage(tempPixels, width, height, bitDepth - 1);
     }
 
     /**
@@ -496,7 +376,7 @@ public class GrayImage {
             }
         }
 
-        return new GrayImage(result2D, this.bitDepth);
+        return new GrayImage(result2D, bitDepth);
     }
 
     /**
@@ -526,6 +406,45 @@ public class GrayImage {
 
         return new GrayImage(result2D, this.bitDepth);
     }
+
+    public GrayImage linearInterpolation(int newW, int newH) {
+        int[][] result2D = new int[newW][newH];
+        int[][] padded2D = padArray(pixels2D);
+
+        int oldW = width;
+        int oldH = height;
+        double xRatio = oldW / (double) newW;
+        double yRatio = oldH / (double) newH;
+
+        double translatedX, translatedY, fracX, fracY;
+        int x1, x2, y1, y2;
+        double q11, q22;
+
+        for (int y = 0; y < newH; ++y) {
+            for (int x = 0; x < newW; ++x) {
+                translatedX = x * xRatio;
+                translatedY = y * yRatio;
+
+                x1 = (int) Math.min(oldW - 1, Math.floor(translatedX));
+                x2 = x1 + 1;
+                y1 = (int) Math.min(oldH - 1, Math.floor(translatedY));
+                y2 = y1 + 1;
+
+                q11 = padded2D[x1][y1];
+                q22 = padded2D[x2][y2];
+
+                fracX = translatedX - Math.floor(translatedX);
+                double fx1 = q11 + fracX * (q22 - q11);
+
+                int result = (int) (fx1 + 0.5);
+                result2D[x][y] = result;
+            }
+        }
+
+        return new GrayImage(result2D, this.bitDepth);
+    }
+
+
 
     /**
      * Resizes image. Calculates new pixel values using bilinear interpolation.
@@ -585,31 +504,24 @@ public class GrayImage {
      * @return equalized GrayImage
      */
     public GrayImage histogramEqGlobal() {
-        int w = width;
-        int h = height;
-        int numPixels = w * h;
-        int L = (int) Math.pow(2, bitDepth);
+        int numPixels = width * height;
+//        int L = (int) Math.pow(2, bitDepth);
 
-        if (this.histogram == null) {
-            this.histogram = calcHistogram(this.pixels1D);
+        if (histogram == null) {
+            histogram = calcHistogram(pixels1D);
         }
 
-        // Calculate cumulative histogram
-        long[] cumulHistogram = new long[this.histogram.length];
-        cumulHistogram[0] = histogram[0];
-        for (int i = 1; i < histogram.length; ++i) {
-            cumulHistogram[i] = cumulHistogram[i-1] + histogram[i];
-        }
+        // Find lookup table for gray values.
+        int[] intensityLUT = calcHistogramLUT(histogram);
 
-        // Create new pixel array with equalized values using cumulative histogram
-        int[] newPixels = new int[numPixels];
+        // Make new pixels array using the Lookup table.
+        int[] equalizedValues = new int[numPixels];
         for (int i = 0; i < numPixels; ++i) {
-            int hIndex = pixels1D[i];
-            newPixels[i] = (int) (cumulHistogram[hIndex] * ((L - 1) / (double) numPixels));
+            equalizedValues[i] = intensityLUT[pixels1D[i]];
         }
 
-        // Create a new GrayImage from newPixels
-        return new GrayImage(newPixels, this.width, this.height, this.bitDepth);
+        // Create a new GrayImage from new pixels
+        return new GrayImage(equalizedValues, width, height, bitDepth);
     }
 
     /**
@@ -620,10 +532,11 @@ public class GrayImage {
      */
     public GrayImage histogramEqLocal(int windowSize) {
         int padSize = windowSize / 2;
-        int[][] padded2D = nPadArray(pixels2D, padSize);
+        int[][] padded2D = MatrixUtils.nPadArray(pixels2D, 1, padSize, padSize);
 
         int[][] result2D = new int[width][height];
 
+        // For each pixel, use its neighborhood to find adjusted value.
         for (int x = 0; x < width; ++x) {
             for (int y = 0; y < height; ++y) {
                 int paddedX = x + padSize;
@@ -636,58 +549,67 @@ public class GrayImage {
     }
 
     /**
-     * Adds padding to all sides of a 2D array. Simply replicates the border pixels.
+     * Performs histogram specification. Modifies the image to match intensity distribution of reference.
      *
-     * @param old2D pixels2D
-     * @param padSize how many pixels to pad
-     * @return padded array[][]
+     * @param reference The image we are trying to match.
+     * @return modified GrayImage
      */
-    private int[][] nPadArray(int[][] old2D, int padSize) {
-        /**
-         * TODO: debug
-         */
+    public GrayImage histogramMatching(GrayImage reference) {
 
-        int oldW = old2D.length;
-        int oldH = old2D[0].length;
+        int[] sourceLUT = this.calcHistogramLUT(this.histogram);
+        int[] toLUT = reference.calcHistogramLUT(reference.histogram);
 
-        int newW = oldW + 2 * padSize;
-        int newH = oldH + 2 * padSize;
-
-        int[][] new2D = new int[newW][newH];
-
-        // Pad the left side
-        for (int x = 0; x < padSize; ++x) {
-            for (int y = 0; y < padSize; ++y) {
-                new2D[x][y] = old2D[0][0];
-            }
-            System.arraycopy(old2D[0], 0, new2D[x], padSize, oldH);
-            for (int y = newH - padSize; y < newH; ++y) {
-                new2D[x][y] = old2D[0][oldH - 1];
-            }
+        int[] mapping = new int[histogram.length];
+        int currReferenceIndex = 0;
+        for (int i = 0; i < histogram.length; ++i) {
+            int origLevel = sourceLUT[i];
+            int newLevel = getIndexOf(origLevel, toLUT, currReferenceIndex);
+            currReferenceIndex = newLevel;
+            mapping[i] = newLevel;
         }
 
-        // Pad the center on top and bottom.
-        for (int x = padSize; x < newW - padSize; ++x) {
-            for (int y = 0; y < padSize; ++y) {
-                new2D[x][y] = old2D[x - padSize][0];
-            }
-            System.arraycopy(old2D[x - padSize], 0, new2D[x], padSize, oldH);
-            for (int y = newH - padSize; y < newH; ++y) {
-                new2D[x][y] = old2D[x - padSize][oldH - 1];
-            }
+        int[] result1D = new int[pixels1D.length];
+        for (int i = 0; i < pixels1D.length; ++i) {
+            result1D[i] = mapping[pixels1D[i]];
         }
 
-        // Pad the right side
-        for (int x = newW - padSize; x < newW; ++x) {
-            for (int y = 0; y < padSize; ++y) {
-                new2D[x][y] = old2D[oldW - 1][0];
-            }
-            System.arraycopy(old2D[oldW - 1], 0, new2D[x], padSize, oldH);
-            for (int y = newH - padSize; y < newH; ++y) {
-                new2D[x][y] = old2D[oldW - 1][oldH - 1];
+        return new GrayImage(result1D, width, height, bitDepth);
+    }
+
+    private int getIndexOf(int target, int[] arr, int startingIndex) {
+        for (int i = startingIndex; i < arr.length; ++i) {
+            if (arr[i] >= target) {
+                return i;
             }
         }
-        return new2D;
+        return startingIndex;
+    }
+
+
+    /**
+     * Creates a LUT to use for histogram equalization.
+     * index = brightnessValue, LUT[index] = equalized brightnessValue
+     *
+     * @param hist histogram to use to make LUT
+     * @return LUT
+     */
+    private int[] calcHistogramLUT(long[] hist) {
+        // Calculate cumulative histogram
+        long[] cumulHistogram = new long[hist.length];
+        cumulHistogram[0] = hist[0];
+        for (int i = 1; i < hist.length; ++i) {
+            cumulHistogram[i] = cumulHistogram[i - 1] + hist[i];
+        }
+
+        // Make a lookup table that maps gray intensity values to equalized values.
+        int numGrayLevels = (int) Math.pow(2, this.bitDepth);
+        int[] newIntensities = new int[numGrayLevels];
+
+        double multiplier = (double) (numGrayLevels - 1) / (this.width * this.height);
+        for (int i = 0; i < numGrayLevels; ++i) {
+            newIntensities[i] = (int) (cumulHistogram[i] * multiplier);
+        }
+        return newIntensities;
     }
 
     /**
@@ -716,25 +638,6 @@ public class GrayImage {
         }
         return (int) ((counter * 255.0) / (double) (windowSize * windowSize));
     }
-
-    /**
-     * Performs histogram specification. Modifies the image to match intensity distribution of reference.
-     *
-     * @param reference The image we are trying to match.
-     * @return modified GrayImage
-     */
-    public GrayImage histogramMatching(GrayImage reference) {
-        /**
-         * TODO: need to write this
-         */
-        long[] hMod = this.histogram;
-        long[] hRef = reference.histogram;
-        double[] cdfMod = this.cdf();
-        double[] cdfRef = reference.cdf();
-
-        return this;
-    }
-
 
     /**
      * Calculates the cumulative distribution function based on the histogram. This is used for histogram matching.
@@ -770,12 +673,8 @@ public class GrayImage {
         return result;
     }
 
-    private static double[] int2doubleArr(int[] intArr) {
-        double[] result = new double[intArr.length];
-        for (int i = 0; i < result.length; ++i) {
-            result[i] = (double) intArr[i];
-        }
-        return result;
+    public static BufferedImage convertToGrayscale(BufferedImage source) {
+        BufferedImageOp op = new ColorConvertOp(ColorSpace.getInstance(ColorSpace.CS_GRAY), null);
+        return op.filter(source, null);
     }
-
 }

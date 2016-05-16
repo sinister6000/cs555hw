@@ -2,8 +2,10 @@ package imageprocessor;
 
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
 import javafx.scene.layout.BorderPane;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 
 import java.io.IOException;
@@ -31,6 +33,14 @@ public class MainApp extends Application {
             mainLayout = loader.load();
 
             primaryStage.setScene(new Scene(mainLayout));
+
+            //set Stage boundaries to visible bounds of the main screen
+            Rectangle2D primaryScreenBounds = Screen.getPrimary().getVisualBounds();
+            primaryStage.setX(primaryScreenBounds.getMinX());
+            primaryStage.setY(primaryScreenBounds.getMinY());
+            primaryStage.setWidth(primaryScreenBounds.getWidth());
+            primaryStage.setHeight(primaryScreenBounds.getHeight());
+
             primaryStage.show();
         } catch (IOException e) {
             e.printStackTrace();

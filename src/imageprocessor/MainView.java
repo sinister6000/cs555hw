@@ -1,8 +1,9 @@
 package imageprocessor;
 
-import imageprocessor.model.GrayHistogram;
-import imageprocessor.model.GrayImage;
+import imageprocessor.model.*;
 import javafx.application.Platform;
+import javafx.collections.FXCollections;
+import javafx.embed.swing.SwingFXUtils;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -12,11 +13,14 @@ import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.image.WritableImage;
-import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
+import javafx.stage.StageStyle;
 
+import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,8 +38,6 @@ public class MainView implements Initializable {
     @FXML
     private BarChart<String, Number> rightHistogram;
     @FXML
-    private AnchorPane center;
-    @FXML
     private ScrollPane sp1;
     @FXML
     private ScrollPane sp2;
@@ -48,9 +50,15 @@ public class MainView implements Initializable {
     @FXML
     private Button rightToLeft;
     @FXML
+    private VBox right2LeftGroup;
+    @FXML
     private ImageView iv1;
     @FXML
     private ImageView iv2;
+    @FXML
+    private TitledPane tp1;
+    @FXML
+    private TitledPane tp2;
     @FXML
     private Label leftInfo;
     @FXML
@@ -60,11 +68,11 @@ public class MainView implements Initializable {
     @FXML
     private Button buttonGrayRes;
     @FXML
-    private javafx.scene.control.TextField logTransC;
+    private TextField logTransC;
     @FXML
     private Button buttonLogTrans;
     @FXML
-    private javafx.scene.control.TextField powerTransC;
+    private TextField powerTransC;
     @FXML
     private TextField powerTransGamma;
     @FXML
@@ -88,11 +96,75 @@ public class MainView implements Initializable {
     @FXML
     private Group histLocalGroup;
     @FXML
+    private Group histLocalGroup2;
+    @FXML
     private TextField histLocalFilterSize;
     @FXML
-    private AnchorPane leftHistPane;
+    private Button histMatchingButton;
     @FXML
-    private AnchorPane rightHistPane;
+    private VBox leftHistPane;
+    @FXML
+    private VBox rightHistPane;
+    @FXML
+    private TextField smoothingWidth;
+    @FXML
+    private TextField smoothingHeight;
+    @FXML
+    private Button smoothingButton;
+    @FXML
+    private TextField medianWidth;
+    @FXML
+    private TextField medianHeight;
+    @FXML
+    private Button medianButton;
+    @FXML
+    private ChoiceBox<String> rankType;
+    @FXML
+    private TextField rankWidth;
+    @FXML
+    private TextField rankHeight;
+    @FXML
+    private Button rankButton;
+    @FXML
+    private ChoiceBox<String> laplacianWidth;
+    @FXML
+    private Button laplacianButton;
+    @FXML
+    private TextField highBoostWidth;
+    @FXML
+    private TextField highBoostHeight;
+    @FXML
+    private TextField highBoostAmount;
+    @FXML
+    private Button highBoostButton;
+    @FXML
+    private TextField geoWidth;
+    @FXML
+    private TextField geoHeight;
+    @FXML
+    private Button geoButton;
+    @FXML
+    private TextField harmonicWidth;
+    @FXML
+    private TextField harmonicHeight;
+    @FXML
+    private Button harmonicButton;
+    @FXML
+    private TextField contraHarmonicWidth;
+    @FXML
+    private TextField contraHarmonicHeight;
+    @FXML
+    private TextField contraHarmonicQ;
+    @FXML
+    private Button contraHarmonicButton;
+    @FXML
+    private TextField alphaWidth;
+    @FXML
+    private TextField alphaHeight;
+    @FXML
+    private TextField alphaD;
+    @FXML
+    private Button alphaButton;
 
     public GrayImage getLeftGrayImage() {
         return leftGrayImage;
@@ -110,8 +182,7 @@ public class MainView implements Initializable {
         File file = fileChooser.showOpenDialog(imageprocessor.MainApp.primaryStage);
 
         if (file != null) {
-            GrayImage gimg = new GrayImage(file);
-            leftGrayImage = gimg;
+            leftGrayImage = new GrayImage(file);
             rightGrayImage = null;
             displayFXI(leftGrayImage, "left");
             clearDisplay("right");
@@ -125,7 +196,13 @@ public class MainView implements Initializable {
         fileChooser.setTitle("Save Image");
         File file = fileChooser.showSaveDialog(imageprocessor.MainApp.primaryStage);
         if (file != null) {
-            rightGrayImage.toFile(file);
+            Image img = iv2.getImage();
+            try {
+                ImageIO.write(SwingFXUtils.fromFXImage(img, null), "png", file);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+//            rightGrayImage.toFile(file);
         }
     }
 
@@ -134,6 +211,11 @@ public class MainView implements Initializable {
         Platform.exit();
     }
 
+    /**
+     * Moves the image from right pane to left pane.
+     *
+     * @param event button click
+     */
     @FXML
     private void rightToLeftFired(ActionEvent event) {
         if (rightGrayImage != null) {
@@ -141,8 +223,6 @@ public class MainView implements Initializable {
             displayFXI(leftGrayImage, "left");
             leftInfo.setText(rightInfo.getText());
             clearDisplay("right");
-
-            setLeftHistogram();
         }
     }
 
@@ -173,29 +253,41 @@ public class MainView implements Initializable {
      * @return WritableImage that was displayed
      */
     private WritableImage displayFXI(GrayImage gimg, String side) {
-        WritableImage fxi = gimg.toFXImage();
+        try {
+            WritableImage fxi = gimg.toFXImage();
 
-        if (side.equals("left")) {
-            iv1.setImage(fxi);
-            leftInfo.setText("" + gimg.getWidth() + "x" + gimg.getHeight() + ", " + gimg.getBitDepth() + "-bit ");
-            leftGrayImage = gimg;
-            if (gimg.getBitDepth() == 1) {
-                buttonGrayRes.setDisable(true);
-            } else {
-                buttonGrayRes.setDisable(false);
+            if (side.equals("left")) {
+                clearDisplay("left");
+                iv1.setImage(fxi);
+                leftInfo.setText("" + gimg.getWidth() + "x" + gimg.getHeight() + ", " + gimg.getBitDepth() + "-bit ");
+                leftGrayImage = gimg;
+                if (gimg.getBitDepth() == 1) {
+                    buttonGrayRes.setDisable(true);
+                } else {
+                    buttonGrayRes.setDisable(false);
+                }
+                bitDepthLabel.setText(Integer.toString(leftGrayImage.getBitDepth()));
+                setSourceImgSizeLabel();
+                setLeftHistogram();
+                tp1.setVisible(true);
+                leftHistPane.setVisible(true);
             }
-            bitDepthLabel.setText(Integer.toString(leftGrayImage.getBitDepth()));
-            setSourceImgSizeLabel();
-            setLeftHistogram();
-        }
 
-        else if (side.equals("right")) {
-            iv2.setImage(fxi);
-            rightInfo.setText("" + gimg.getWidth() + "x" + gimg.getHeight() + ", " + gimg.getBitDepth() + "-bit ");
-            rightGrayImage = gimg;
-            setRightHistogram();
+            else if (side.equals("right")) {
+                clearDisplay("right");
+                iv2.setImage(fxi);
+                rightInfo.setText("" + gimg.getWidth() + "x" + gimg.getHeight() + ", " + gimg.getBitDepth() + "-bit ");
+                rightGrayImage = gimg;
+                setRightHistogram();
+                tp2.setVisible(true);
+                rightHistPane.setVisible(true);
+                right2LeftGroup.setVisible(true);
+            }
+            return fxi;
+        } catch (IllegalArgumentException e) {
+            e.printStackTrace();
         }
-        return fxi;
+        return new WritableImage(5,5);
     }
 
     /**
@@ -218,36 +310,30 @@ public class MainView implements Initializable {
             bitDepthLabel.setText(" ");
             setSourceImgSizeLabel();
             setLeftHistogram();
-        }
-
-        else if (side.equals("right")) {
+            leftHistPane.setVisible(false);
+            tp1.setVisible(false);
+        } else if (side.equals("right")) {
             iv2.setImage(null);
             rightGrayImage = null;
             rightInfo.setText(" ");
             setRightHistogram();
+            rightHistPane.setVisible(false);
+            tp2.setVisible(false);
+            right2LeftGroup.setVisible(false);
         }
     }
 
     @FXML
     private void buttonLogTransClicked() {
-        if (leftGrayImage == null) {
-            return;
-        }
-        String cText = logTransC.getText();
-        if (cText.equals("")) {
-            System.out.println("wrong type for c");
-            /**
-             * TODO: make a popup alert about value of c.
-             */
-        }
-
-        else {
-            double c = Double.parseDouble(cText);
+        try {
+            double c = Double.parseDouble(logTransC.getText());
             GrayImage result = leftGrayImage.logTrans(c);
             displayFXI(result, "right");
             String addedInfo = rightInfo.getText();
             addedInfo += " [Log transformation (c=" + c + ")]";
             rightInfo.setText(addedInfo);
+        } catch (NumberFormatException e) {
+            displayAlert("Invalid Input", "Please fix input value", "c must be a decimal number");
         }
     }
 
@@ -256,30 +342,17 @@ public class MainView implements Initializable {
         if (leftGrayImage == null) {
             return;
         }
-        String cText = powerTransC.getText();
-        String gammaText = powerTransGamma.getText();
-        if (cText.equals("") || gammaText.equals("")) {
-            System.out.println("c and gamma need to be numbers");
-            /**
-             * TODO: make a popup alert about value of c/gamma.
-             */
-        } else {
-            try {
-                double c = Double.parseDouble(cText);
-                double gamma = Double.parseDouble(gammaText);
+        try {
+            double c = Double.parseDouble(powerTransC.getText());
+            double gamma = Double.parseDouble(powerTransGamma.getText());
 
-                GrayImage result = leftGrayImage.powerTrans(c, gamma);
-                displayFXI(result, "right");
-                String addedInfo = rightInfo.getText();
-                addedInfo += " [Power-law transformation (c=" + c + ", gamma=" + gamma + ")]";
-                rightInfo.setText(addedInfo);
-
-            } catch (NumberFormatException e) {
-                System.out.println("c and gamma need to be numbers.");
-                /**
-                 * TODO: add alert screen
-                 */
-            }
+            GrayImage result = leftGrayImage.powerTrans(c, gamma);
+            displayFXI(result, "right");
+            String addedInfo = rightInfo.getText();
+            addedInfo += " [Power-law transformation (c=" + c + ", gamma=" + gamma + ")]";
+            rightInfo.setText(addedInfo);
+        } catch (NumberFormatException e) {
+            displayAlert("Invalid Input", "Please fix input values", "c and gamma must be decimal numbers");
         }
     }
 
@@ -307,10 +380,10 @@ public class MainView implements Initializable {
             return;
         }
         if (leftGrayImage.getWidth() != w || leftGrayImage.getHeight() != h) {
-            java.util.List<String> choices = new ArrayList<>();
-            choices.add("Replication");
+            List<String> choices = new ArrayList<>();
             choices.add("Nearest Neighbor");
-            choices.add("Bilinear interpolation");
+            choices.add("Linear Interpolation");
+            choices.add("Bilinear Interpolation");
             zoomChoiceDialog(choices, w, h);
         }
     }
@@ -324,27 +397,29 @@ public class MainView implements Initializable {
         Optional<String> result = dialog.showAndWait();
         result.ifPresent(zoomMethod -> {
             String newInfo = "";
-            if (zoomMethod.equals("Replication")) {
-                displayFXI(leftGrayImage.zoomReplication(w, h), "right");
-                newInfo = rightInfo.getText();
-                newInfo += " [Spatial Resolution - Replication ";
-            }
-            else if (zoomMethod.equals("Nearest Neighbor")) {
-                displayFXI(leftGrayImage.nearestNeighbor(w, h), "right");
-                newInfo = rightInfo.getText();
-                newInfo += " [Spatial Resolution - Nearest Neighbor ";
-            }
-            else if (zoomMethod.equals("Bilinear interpolation")) {
-                displayFXI(leftGrayImage.bilinearInterpolation(w, h), "right");
-                newInfo = rightInfo.getText();
-                newInfo += " [Spatial Resolution - Bilinear Interpolation ";
+            switch (zoomMethod) {
+                case "Linear Interpolation":
+                    displayFXI(leftGrayImage.linearInterpolation(w, h), "right");
+                    newInfo = rightInfo.getText();
+                    newInfo += " [Spatial Resolution - Linear Interpolation ";
+                    break;
+                case "Nearest Neighbor":
+                    displayFXI(leftGrayImage.nearestNeighbor(w, h), "right");
+                    newInfo = rightInfo.getText();
+                    newInfo += " [Spatial Resolution - Nearest Neighbor ";
+                    break;
+                case "Bilinear Interpolation":
+                    displayFXI(leftGrayImage.bilinearInterpolation(w, h), "right");
+                    newInfo = rightInfo.getText();
+                    newInfo += " [Spatial Resolution - Bilinear Interpolation ";
+                    break;
             }
             newInfo += "(" + w + "x" + h + ")]";
             rightInfo.setText(newInfo);
         });
         return null;
     }
-
+    
     @FXML
     private void histEqButtonClicked() {
         if (leftGrayImage == null) {
@@ -355,20 +430,36 @@ public class MainView implements Initializable {
             displayFXI(leftGrayImage.histogramEqGlobal(), "right");
             String newInfo = rightInfo.getText();
             newInfo += " [Global Histogram Equalization]";
-            rightInfo.setText(newInfo);;
+            rightInfo.setText(newInfo);
         }
         else if (histLocal.isSelected()) {
             try {
                 int filterSize = Integer.parseInt(histLocalFilterSize.getText());
+                if ((filterSize % 2) == 0) {
+                    throw new NumberFormatException("Must be odd integer");
+                }
                 displayFXI(leftGrayImage.histogramEqLocal(filterSize), "right");
                 String newInfo = rightInfo.getText();
                 newInfo += " [Local Histogram Equalization]";
                 rightInfo.setText(newInfo);
             } catch (NumberFormatException e) {
-                /**
-                 * TODO: alert screen
-                 */
+                displayAlert("Invalid Input", "Please fix input value", "n needs to be an odd, positive integer");
             }
+        }
+    }
+
+    @FXML
+    private void histMatchingButtonFired() {
+        final FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Set Reference Image");
+        File file = fileChooser.showOpenDialog(imageprocessor.MainApp.primaryStage);
+
+        if (file != null) {
+            GrayImage gimg = new GrayImage(file);
+            displayFXI(leftGrayImage.histogramMatching(gimg), "right");
+            String addedInfo = rightInfo.getText();
+            addedInfo += " [Histogram Matching]";
+            rightInfo.setText(addedInfo);
         }
     }
 
@@ -390,10 +481,204 @@ public class MainView implements Initializable {
         }
     }
 
+    @FXML
+    private void smoothingButtonFired() {
+        try {
+            int filterWidth = Integer.parseInt(smoothingWidth.getText());
+            int filterHeight = Integer.parseInt(smoothingHeight.getText());
+            if ((filterWidth % 2) == 0 || (filterHeight % 2) == 0) {
+                throw new NumberFormatException("Must be odd integers");
+            }
+            BoxFilter smoother = new BoxFilter(filterWidth, filterHeight);
+            displayFXI(smoother.runFilter(leftGrayImage), "right");
+            String newInfo = rightInfo.getText();
+            newInfo += " [Box Filter (" + filterWidth + "x" + filterHeight + " mask)]";
+            rightInfo.setText(newInfo);
+        } catch (NumberFormatException e) {
+            displayAlert("Invalid Input", "Please fix input values", "Use odd, positive integers");
+        }
+    }
+    
+    @FXML
+    private void medianButtonFired() {
+        try {
+            int filterWidth = Integer.parseInt(medianWidth.getText());
+            int filterHeight = Integer.parseInt(medianHeight.getText());
+            if ((filterWidth % 2) == 0 || (filterHeight % 2) == 0) {
+                throw new NumberFormatException("Must be odd integers");
+            }
+            MedianFilter mf = new MedianFilter(filterWidth, filterHeight);
+            displayFXI(mf.runFilter(leftGrayImage), "right");
+            String newInfo = rightInfo.getText();
+            newInfo += " [Median Filter (" + filterWidth + "x" + filterHeight + " mask)]";
+            rightInfo.setText(newInfo);
+        } catch (NumberFormatException e) {
+            displayAlert("Invalid Input", "Please fix input values", "Use odd, positive integers");
+        }
+    }
+    
+    @FXML
+    private void rankButtonFired() {
+        try {
+            String type = rankType.getValue();
+            int filterWidth = Integer.parseInt(rankWidth.getText());
+            int filterHeight = Integer.parseInt(rankHeight.getText());
+            if ((filterWidth % 2) == 0 || (filterHeight % 2) == 0) {
+                throw new NumberFormatException("Must be odd integers");
+            }
+            RankFilter rf = new RankFilter(type, filterWidth, filterHeight);
+            displayFXI(rf.runFilter(leftGrayImage), "right");
+            String newInfo = rightInfo.getText();
+            newInfo += " [" + type + " Filter (" + filterWidth + "x" + filterHeight + " mask)]";
+            rightInfo.setText(newInfo);
+        } catch (NumberFormatException e) {
+            displayAlert("Invalid Input", "Please fix input values", "Use odd, positive integers");
+        }
+    }
+
+    @FXML
+    private void laplacianButtonFired() {
+        try {
+            String laplacWidth = laplacianWidth.getValue();
+            int filterWidth = Integer.parseInt(laplacWidth);
+            if ((filterWidth % 2) == 0) {
+                throw new NumberFormatException("Must be a positive, odd integer");
+            }
+            LaplacianFilter filter = new LaplacianFilter(filterWidth);
+            displayFXI(filter.runFilter(leftGrayImage), "right");
+            String newInfo = rightInfo.getText();
+            newInfo += " [Laplacian Filter (" + filterWidth + "x" + filterWidth + " mask)]";
+            rightInfo.setText(newInfo);
+        } catch (NumberFormatException e) {
+            displayAlert("Invalid Input", "Please fix input value", "Use odd, positive integer");
+        }
+    }
+
+    @FXML
+    private void highBoostButtonFired() {
+        try {
+            int filterWidth = Integer.parseInt(highBoostWidth.getText());
+            int filterHeight = Integer.parseInt(highBoostHeight.getText());
+            double filterAmount = Double.parseDouble(highBoostAmount.getText());
+            if ((filterWidth % 2) == 0 || (filterHeight % 2) == 0) {
+                throw new NumberFormatException("Must be odd integers");
+            }
+            HighBoostFilter hbf = new HighBoostFilter(filterWidth, filterHeight, filterAmount);
+            displayFXI(hbf.runFilter(leftGrayImage), "right");
+            String newInfo = rightInfo.getText();
+            newInfo += " [HighBoost Filter (" + filterWidth + "x" + filterHeight + " mask)]";
+            rightInfo.setText(newInfo);
+        } catch (NumberFormatException e) {
+            displayAlert("Invalid Input", "Please fix input values", "Height & Width: odd, positive integers" +
+                                                                     "\nAmount: positive decimal");
+        }
+    }
+
+    @FXML
+    private void geoButtonFired() {
+        try {
+            int filterWidth = Integer.parseInt(geoWidth.getText());
+            int filterHeight = Integer.parseInt(geoHeight.getText());
+            if ((filterWidth % 2) == 0 || (filterHeight % 2) == 0) {
+                throw new NumberFormatException("Must be odd integers");
+            }
+            GeoMeanFilter gmf = new GeoMeanFilter(filterWidth, filterHeight);
+            displayFXI(gmf.runFilter(leftGrayImage), "right");
+            String newInfo = rightInfo.getText();
+            newInfo += " [Geometric Mean Filter (" + filterWidth + "x" + filterHeight + " mask)]";
+            rightInfo.setText(newInfo);
+        } catch (NumberFormatException e) {
+            displayAlert("Invalid Input", "Please fix input values", "Use odd, positive integers");
+        }
+    }
+
+    @FXML
+    private void harmonicButtonFired() {
+        try {
+            int filterWidth = Integer.parseInt(harmonicWidth.getText());
+            int filterHeight = Integer.parseInt(harmonicHeight.getText());
+            if ((filterWidth % 2) == 0 || (filterHeight % 2) == 0) {
+                throw new NumberFormatException("Must be odd integers");
+            }
+            HarmonicMeanFilter hf = new HarmonicMeanFilter(filterWidth, filterHeight);
+            displayFXI(hf.runFilter(leftGrayImage), "right");
+            String newInfo = rightInfo.getText();
+            newInfo += " [Harmonic Mean Filter (" + filterWidth + "x" + filterHeight + " mask)]";
+            rightInfo.setText(newInfo);
+        } catch (NumberFormatException e) {
+            displayAlert("Invalid Input", "Please fix input values", "Use odd, positive integers");
+        }
+    }
+
+    @FXML
+    private void contraHarmonicButtonFired() {
+        try {
+            int filterWidth = Integer.parseInt(contraHarmonicWidth.getText());
+            int filterHeight = Integer.parseInt(contraHarmonicHeight.getText());
+            double q = Double.parseDouble(contraHarmonicQ.getText());
+            if ((filterWidth % 2) == 0 || (filterHeight % 2) == 0) {
+                throw new NumberFormatException("Must be odd integers");
+            }
+            ContraHarmonicMeanFilter chmf = new ContraHarmonicMeanFilter(filterWidth, filterHeight, q);
+            displayFXI(chmf.runFilter(leftGrayImage), "right");
+            String newInfo = rightInfo.getText();
+            newInfo += " [ContraHarmonic Mean Filter (" + filterWidth + "x" + filterHeight + " mask, Q = " + q + ")]";
+            rightInfo.setText(newInfo);
+        } catch (NumberFormatException e) {
+            displayAlert("Invalid Input", "Please fix input values", "Use odd, positive integers." +
+                        "\nQ must be a decimal number.");
+        }
+    }
+
+    @FXML
+    private void alphaButtonFired() {
+        try {
+            int filterWidth = Integer.parseInt(alphaWidth.getText());
+            int filterHeight = Integer.parseInt(alphaHeight.getText());
+            int filterD = Integer.parseInt(alphaD.getText());
+            if ((filterWidth % 2) == 0 || (filterHeight % 2) == 0) {
+                throw new NumberFormatException("Must be odd integers");
+            }
+            if ((filterD % 2) != 0) {
+                throw new NumberFormatException("d Must be even integer");
+            }
+            AlphaTrimmedMeanFilter atf = new AlphaTrimmedMeanFilter(filterWidth, filterHeight, filterD);
+            displayFXI(atf.runFilter(leftGrayImage), "right");
+            String newInfo = rightInfo.getText();
+            newInfo += " [AlphaTrimmed Mean Filter (" + filterWidth + "x" + filterHeight + " mask, d=" + filterD + "]";
+            rightInfo.setText(newInfo);
+        } catch (NumberFormatException e) {
+            displayAlert("Invalid Input", "Please fix input values", "Width & Height are odd, positive integers" +
+                        "\nd is an even, positive integer");
+        }
+    }
+    
+    
+    private void displayAlert(String title, String header, String content) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle(title);
+        alert.setHeaderText(header);
+        alert.setContentText(content);
+        alert.initStyle(StageStyle.UTILITY);
+        alert.showAndWait();
+    }
+    
 
     public void initialize(URL fxmlFileLocation, ResourceBundle resources) {
+        tp1.setVisible(false);
+        tp2.setVisible(false);
+        leftHistPane.setVisible(false);
+        rightHistPane.setVisible(false);
+        right2LeftGroup.setVisible(false);
+
         histGlobal.setUserData("global");
         histLocal.setUserData("local");
+
+        laplacianWidth.setItems(FXCollections.observableArrayList("3", "5", "7"));
+        laplacianWidth.setValue("3");
+
+        rankType.setItems(FXCollections.observableArrayList("Median", "Max", "Min", "Midpoint"));
+        rankType.setValue("Median");
 
         histEqToggleGroup.selectedToggleProperty().addListener((observable, oldValue, newValue) -> {
             if (histEqToggleGroup.getSelectedToggle() != null) {
@@ -401,12 +686,17 @@ public class MainView implements Initializable {
                 if (a.equals("global")) {
                     histGlobal.setSelected(true);
                     histLocalGroup.setDisable(true);
+                    histLocalGroup2.setDisable(true);
+                    histLocalGroup.setVisible(false);
+                    histLocalGroup2.setVisible(false);
                     histEqButton.setDisable(false);
                 }
                 else if (a.equals("local")) {
                     histLocal.setSelected(true);
                     histLocalGroup.setVisible(true);
+                    histLocalGroup2.setVisible(true);
                     histLocalGroup.setDisable(false);
+                    histLocalGroup2.setDisable(false);
                     histEqButton.setDisable(false);
                 }
 
